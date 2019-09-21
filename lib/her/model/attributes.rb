@@ -254,7 +254,9 @@ module Her
         #   end
         def attributes(*attributes)
           attribute_methods_mutex.synchronize do
-            define_attribute_methods attributes
+            attributes.each do |attr_name|
+              define_attribute_method(attr_name) if attr_name =~ /\A[a-zA-Z_][a-zA-Z0-9\-_]*\z/
+            end
           end
         end
 

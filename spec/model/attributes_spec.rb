@@ -74,6 +74,31 @@ describe Her::Model::Attributes do
       expect(@new_user.get_attribute(:unknown_method_for_a_user)).to be_nil
       expect(@new_user.get_attribute(:'life-span')).to eq("3 years")
     end
+
+    it 'does not allow API provide to inject code' do
+      begin
+        tmp_store = $global_variable_set_by_injected_code_execution
+        $global_variable_set_by_injected_code_execution = nil
+        payload = "'){};$global_variable_set_by_injected_code_execution = true;define_method(:'"
+
+        api = Her::API.new url: "https://api.example.com" do |builder|
+          builder.use Her::Middleware::FirstLevelParseJSON
+          builder.use Faraday::Request::UrlEncoded
+          builder.adapter :test do |stub|
+
+
+            stub.get("/users/1") { [200, {}, { id: 1, payload => payload.to_sym }.to_json] }
+          end
+        end
+        Foo::User.use_api api
+
+        Foo::User.find(1)
+
+        expect($global_variable_set_by_injected_code_execution).to be_nil
+      ensure
+        $global_variable_set_true_by_injected_code_execution = tmp_store
+      end
+    end
   end
 
   context "assigning new resource data" do
